@@ -1,0 +1,23 @@
+#USECASE 1 - Jenkins Job to run application , without checkin code in GIT
+JENKINS BUILD SHELL CODE
+
+docker pull redis
+docker pull postgres:9.4
+cd $WORKSPACE/vote
+docker build . -t  voting-app
+cd $WORKSPACE/worker
+docker build . -t  worker
+cd $WORKSPACE/result
+docker build . -t result-app
+cd $WORKSPACE
+docker-compose up -d
+
+
+#USECASE 2 - Jenkins Job to run application , after checkin code in GIT
+JENKINS BUILD SHELL CODE
+
+cd $WORKSPACE
+docker-compose up -d
+
+
+#NOTE  -- Above code pulling images from docker hub and from result, vote and worker folder as well (docker file exist in these folders).
