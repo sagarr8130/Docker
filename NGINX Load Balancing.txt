@@ -1,0 +1,95 @@
+NGINX Load Balancing
+
+1) Launch 3 GCP Machines -- Master , Node1 , Node2
+
+2) Run nginx container on Master Node to serve loadbalancing purpose.
+   
+   
+   docker run -p 8080:80 -d nginx
+   
+   
+   [root@manager1 ~]# docker ps -a
+   CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                  NAMES
+   ab36271c174e        nginx               "nginx -g 'daemon of…"   26 hours ago        Up 26 hours         0.0.0.0:8080->80/tcp   keen_ardinghelli
+   
+   
+   Now go into nginx container then 
+   
+   root@ab36271c174e:/etc/nginx/conf.d# pwd
+   /etc/nginx/conf.d
+   root@ab36271c174e:/etc/nginx/conf.d# cat default.conf
+   server {
+      listen 80;
+      location / {
+         proxy_pass http://backend;
+      }
+   }
+   upstream backend {
+      server <Node1_Internal_IP>:5000;
+      server <Node2_Internal_IP>:5000;
+   }
+   
+   And then run "nginx -s reload"
+
+   
+3) Make below 3 Files on Node1 & Node2. (For Node2 only make change to print different message in app.js for better verification) 
+	
+   [root@node2 ~]# cat app.js 
+   const express = require('express')
+   const app = express()
+   const port = 5000
+   const name = process.env.name || "Hi this is Sagar"
+
+ 
+
+   app.get('/', (req, res) => {
+      res.send(`Hello ${name} !`)
+   })
+   app.listen(port, () => {
+   console.log(`Server Started on Port  ${port}`)
+   })
+
+
+   [root@node2 ~]# cat Dockerfile
+   FROM node
+   WORKDIR /app
+   COPY package.json .
+   RUN npm install
+   COPY . .
+   CMD node app.js
+   EXPOSE 5000
+
+
+   [root@node2 ~]# cat package.json
+   {
+   "name": "docker_web_app",
+   "version": "1.0.0",
+   "description": "Node.js on Docker",
+   "author": "First Last <first.last@example.com>",
+   "main": "app.js",
+   "scripts": {
+     "start": "node app.js"
+   },
+   "dependencies": {
+     "express": "^4.16.1"
+   }
+   }
+
+
+   Now build image and Run container on both Node1 & Node2
+
+   [root@node1 ~]# docker ps -a
+   CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                    NAMES
+   56fad48082e8        myapp               "docker-entrypoint.s…"   25 hours ago        Up 25 hours         0.0.0.0:5000->5000/tcp   kind_archimedes
+
+
+   [root@node2 ~]# docker ps -a
+   CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                    NAMES
+   c7db2f1f5f15        newapp              "docker-entrypoint.s…"   25 hours ago        Up 25 hours         0.0.0.0:5000->5000/tcp   hungry_ritchie
+
+
+4) Please make a note to add firewall rules as well in Node1 and Node2 GCP instance.
+
+   For verification - 
+   Hit http://<Master_external_IP>:8080
+   Hit http://<Node1/2_external_IP>:5000  then you will see change in message which we have given in app.js file. And also verify message by stop any container. and when you stop both containers from Node1 and Node2 the you will see nginx message.
