@@ -1,2 +1,0 @@
-# Docker
-Intent to Repository
